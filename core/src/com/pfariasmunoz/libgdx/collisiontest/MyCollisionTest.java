@@ -138,6 +138,20 @@ public class MyCollisionTest extends ApplicationAdapter {
 		modelBatch.render(groundInstance, environment);
 		modelBatch.render(sphereInstance, environment);
 		modelBatch.end();
+
+//		// Adding some rigid bodies
+//		modelBuilder.begin();
+//		MeshPartBuilder mpb = modelBuilder.part("parts", GL20.GL_TRIANGLES, Usage.Position | Usage.Normal | Usage.ColorPacked, new Material(ColorAttribute.createDiffuse(Color.WHITE)));
+//		mpb.setColor(1f, 1f, 1f, 1f);
+//		mpb.box(0, 0, 0, 40, 1, 40);
+//		Model model = modelBuilder.end();
+//		groundInstance = new ModelInstance(model);
+//
+//		btCollisionShape groundShape = new btBoxShape(new Vector3(20, 1 / 2f, 20));
+//		btRigidBodyConstructionInfo bodyInfo = new btRigidBodyConstructionInfo(0, null, groundShape, Vector3.Zero);
+//		btRigidBody body = new btRigidBody(bodyInfo);
+//		world.addRigidBody(body);
+
 	}
 	
 	@Override
