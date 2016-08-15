@@ -2,6 +2,7 @@ package com.pfariasmunoz.libgdx.collisiontest;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -22,10 +23,12 @@ import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.math.collision.Ray;
 import com.badlogic.gdx.physics.bullet.Bullet;
 import com.badlogic.gdx.physics.bullet.collision.ClosestRayResultCallback;
 import com.badlogic.gdx.physics.bullet.collision.btBoxShape;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionDispatcher;
+import com.badlogic.gdx.physics.bullet.collision.btCollisionObject;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionShape;
 import com.badlogic.gdx.physics.bullet.collision.btDbvtBroadphase;
 import com.badlogic.gdx.physics.bullet.collision.btDefaultCollisionConfiguration;
@@ -40,11 +43,7 @@ import com.badlogic.gdx.utils.Array;
 public class MyCollisionTest extends ApplicationAdapter {
 	PerspectiveCamera cam;
 	ModelBatch modelBatch;
-	Array<Model> models;
-	ModelInstance sphereInstance;
-	ModelInstance groundInstance;
 	Environment environment;
-	ModelBuilder modelBuilder;
 
     MyCollisionWorld worldInstance;
     btRigidBody groundBody;
@@ -58,6 +57,8 @@ public class MyCollisionTest extends ApplicationAdapter {
     OrthographicCamera guiCam;
     SpriteBatch batch;
 
+
+
     // Bullet
     private btDefaultCollisionConfiguration collisionConfiguration;
     private btCollisionDispatcher dispatcher;
@@ -68,6 +69,8 @@ public class MyCollisionTest extends ApplicationAdapter {
     private Array<btRigidBodyConstructionInfo> bodyInfos = new Array<btRigidBodyConstructionInfo>();
     private Array<btRigidBody> bodies = new Array<btRigidBody>();
     private btDefaultMotionState sphereMotionState;
+
+
 
 	@Override
 	public void create () {
@@ -118,31 +121,33 @@ public class MyCollisionTest extends ApplicationAdapter {
 		MyContactListener contactListener = new MyContactListener();
 
 		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-		Gdx.gl.glClearColor(0, 0, 0, 1);
+		Gdx.gl.glClearColor(.2f, .2f, .2f, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
-        world.stepSimulation(Gdx.graphics.getDeltaTime(), 5);
+        float delta = Gdx.graphics.getDeltaTime();
+        worldInstance.update(delta);
 
-        sphereMotionState.getWorldTransform(sphereInstance.transform);
+        for(UserData data : UserData.data) {
+            if(!data.isVisible(cam)) {
+                worldInstance.remove(data.getBody());
+            }
+        }
+        modelBatch.begin(cam);
+        for(UserData data : UserData.data) {
+            modelBatch.render(data.getInstance(), environment);
+        }
+        modelBatch.end();
 
-		modelBatch.begin(cam);
-		modelBatch.render(groundInstance, environment);
-		modelBatch.render(sphereInstance, environment);
-		modelBatch.end();
-
-//		// Adding some rigid bodies
-//		modelBuilder.begin();
-//		MeshPartBuilder mpb = modelBuilder.part("parts", GL20.GL_TRIANGLES, Usage.Position | Usage.Normal | Usage.ColorPacked, new Material(ColorAttribute.createDiffuse(Color.WHITE)));
-//		mpb.setColor(1f, 1f, 1f, 1f);
-//		mpb.box(0, 0, 0, 40, 1, 40);
-//		Model model = modelBuilder.end();
-//		groundInstance = new ModelInstance(model);
-//
-//		btCollisionShape groundShape = new btBoxShape(new Vector3(20, 1 / 2f, 20));
-//		btRigidBodyConstructionInfo bodyInfo = new btRigidBodyConstructionInfo(0, null, groundShape, Vector3.Zero);
-//		btRigidBody body = new btRigidBody(bodyInfo);
-//		world.addRigidBody(body);
-
+        batch.setProjectionMatrix(guiCam.combined);
+        batch.begin();
+        font.draw(batch, "FPS: " + Gdx.graphics.getFramesPerSecond(), 0, Gdx.graphics.getHeight());
+        box.draw(batch);
+        cone.draw(batch);
+        cylinder.draw(batch);
+        sphere.draw(batch);
+        raypick.draw(batch);
+        tick.draw(batch);
+        batch.end();
 	}
 	
 	@Override
@@ -160,5 +165,76 @@ public class MyCollisionTest extends ApplicationAdapter {
         solver.dispose();
         Gdx.app.log(this.getClass().getName(), "Disposed");
     }
+
+    public void enableButton(Sprite sp) {
+        tick.setPosition(sp.getX(), sp.getY());
+    }
+
+    // Input adapter and ray testing
+    private final InputAdapter adapter = new InputAdapter() {
+        private Items item = Items.SPHERE;
+        private final Vector3 temp = new Vector3();
+
+        public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+            guiCam.unproject(temp.set(screenX, screenY, 0));
+            if(box.getBoundingRectangle().contains(temp.x, temp.y)) {
+                enableButton(box);
+                item = Items.BOX;
+                return true;
+            } else if (cone.getBoundingRectangle().contains(temp.x, temp.y)) {
+                enableButton(cone);
+                item = Items.CONE;
+                return true;
+            } else if (sphere.getBoundingRectangle().contains(temp.x, temp.y)) {
+                enableButton(sphere);
+                item = Items.SPHERE;
+                return true;
+            } else if (cylinder.getBoundingRectangle().contains(temp.x, temp.y)) {
+                enableButton(cylinder);
+                item = Items.CYLINDER;
+                return true;
+            } else if (raypick.getBoundingRectangle().contains(temp.x, temp.y)) {
+                enableButton(raypick);
+                item = Items.RAY_PICKING;
+                return true;
+            }
+
+            Ray ray = cam.getPickRay(screenX, screenY);
+            Vector3 position = ray.origin.cpy();
+            btRigidBody body;
+            switch (item) {
+                default:
+                case BOX:
+                    body = worldInstance.create_box(position, false);
+                    break;
+                case CONE:
+                    body = worldInstance.create_cone(position, false);
+                    break;
+                case CYLINDER:
+                    body = worldInstance.create_cylinder(position, false);
+                    break;
+                case SPHERE:
+                    body = worldInstance.create_sphere(position, false);
+                    break;
+                case RAY_PICKING:
+                    rayFrom.set(ray.origin);
+                    rayTo.set(ray.direction).scl(50f).add(rayFrom); // 50 meters max
+                    rayTestCB.setCollisionObject(null);
+                    rayTestCB.setClosestHitFraction(1f);
+                    worldInstance.getWorld().rayTest(rayFrom, rayTo, rayTestCB);
+
+                    if(rayTestCB.hasHit()) {
+                        final btCollisionObject obj = rayTestCB.getCollisionObject();
+                        body = (btRigidBody) (obj);
+                        if (body != groundBody) worldInstance.remove(body);
+                    }
+                    return true;
+            }
+
+            body.applyCentralImpulse(ray.direction.scl(20));
+
+            return true;
+        }
+    };
 }
 
