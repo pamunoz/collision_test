@@ -20,6 +20,8 @@ import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
+import com.badlogic.gdx.graphics.g3d.environment.DirectionalShadowLight;
+import com.badlogic.gdx.graphics.g3d.utils.DepthShaderProvider;
 import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
@@ -57,33 +59,37 @@ public class MyCollisionTest extends ApplicationAdapter {
     OrthographicCamera guiCam;
     SpriteBatch batch;
 
-
-
-    // Bullet
-    private btDefaultCollisionConfiguration collisionConfiguration;
-    private btCollisionDispatcher dispatcher;
-    private btDbvtBroadphase broadphase;
-    private btSequentialImpulseConstraintSolver solver;
-    private btDiscreteDynamicsWorld world;
-    private Array<btCollisionShape> shapes = new Array<btCollisionShape>();
-    private Array<btRigidBodyConstructionInfo> bodyInfos = new Array<btRigidBodyConstructionInfo>();
-    private Array<btRigidBody> bodies = new Array<btRigidBody>();
-    private btDefaultMotionState sphereMotionState;
-
-
+    DirectionalShadowLight shadowLight;
+    ModelBatch shadowBatch;
 
 	@Override
 	public void create () {
+        modelBatch = new ModelBatch();
+        environment = new Environment();
+        environment.set(new ColorAttribute(ColorAttribute.AmbientLight, .4f, .4f, .4f, 1f));
+        environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
+        //*************************************************************
+        shadowLight = new DirectionalShadowLight(1024, 1024, 60, 60, 1f, 300);
+        shadowLight.set(0.8f, 0.8f, 0.8f, -1f, -.8f, -.2f);
+        environment.add(shadowLight);
+        environment.shadowMap = shadowLight;
+        shadowBatch = new ModelBatch(new DepthShaderProvider());
+        //**************************************************************
+        cam = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        cam.position.set(0, 10, -20);
+        cam.lookAt(0, 0, 0);
+        cam.near = 1f;
+        cam.far = 100f;
+        cam.update();
         worldInstance = MyCollisionWorld.instance;
         worldInstance.init();
         groundBody = worldInstance.create_ground();
-
         int w = -10;
         for (int i = 0; i < 10; i++) {
             worldInstance.create_box(new Vector3(w += 2, 1.5f, 10), true);
         }
-
         rayTestCB = new ClosestRayResultCallback(Vector3.Zero, Vector3.Z);
+
         font = new BitmapFont();
         guiCam = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         guiCam.position.set(guiCam.viewportWidth / 2f, guiCam.viewportHeight / 2f, 0);
@@ -108,32 +114,39 @@ public class MyCollisionTest extends ApplicationAdapter {
         raypick.setPosition(4 * wt + dt, 0);
 
         tick = new Sprite(new Texture("mark.png"));
+
         enableButton(sphere);
 
         collisionListener = new MyContactListener();
         Gdx.input.setInputProcessor(adapter);
-
 	}
 
 	@Override
 	public void render () {
 
-		MyContactListener contactListener = new MyContactListener();
-
-		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-		Gdx.gl.glClearColor(.2f, .2f, .2f, 1);
-		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
-
+        Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        Gdx.gl.glClearColor(.2f, 0.2f, 0.2f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
         float delta = Gdx.graphics.getDeltaTime();
         worldInstance.update(delta);
-
-        for(UserData data : UserData.data) {
-            if(!data.isVisible(cam)) {
+        for (UserData data : UserData.data) {
+            if (!data.isVisible(cam)) {
                 worldInstance.remove(data.getBody());
             }
         }
+        // update the world
+        //****************
+        shadowLight.begin(Vector3.Zero, cam.direction);
+        shadowBatch.begin(shadowLight.getCamera());
+        for (UserData data : UserData.data) {
+            shadowBatch.render(data.getInstance());
+        }
+        shadowBatch.end();
+        shadowLight.end();
+        //********************
+
         modelBatch.begin(cam);
-        for(UserData data : UserData.data) {
+        for (UserData data : UserData.data) {
             modelBatch.render(data.getInstance(), environment);
         }
         modelBatch.end();
@@ -148,7 +161,7 @@ public class MyCollisionTest extends ApplicationAdapter {
         raypick.draw(batch);
         tick.draw(batch);
         batch.end();
-	}
+    }
 	
 	@Override
 	public void dispose () {
@@ -163,6 +176,8 @@ public class MyCollisionTest extends ApplicationAdapter {
         cylinder.getTexture().dispose();
         raypick.getTexture().dispose();
         sphere.getTexture().dispose();
+        shadowBatch.dispose();
+        shadowLight.dispose();
         Gdx.app.log(this.getClass().getName(), "Disposed.");
     }
 
