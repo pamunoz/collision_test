@@ -68,73 +68,48 @@ public class MyCollisionTest extends ApplicationAdapter {
     private Array<btRigidBodyConstructionInfo> bodyInfos = new Array<btRigidBodyConstructionInfo>();
     private Array<btRigidBody> bodies = new Array<btRigidBody>();
     private btDefaultMotionState sphereMotionState;
-	
+
 	@Override
 	public void create () {
-		modelBatch = new ModelBatch();
+        worldInstance = MyCollisionWorld.instance;
+        worldInstance.init();
+        groundBody = worldInstance.create_ground();
 
-		environment = new Environment();
-		environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
-		environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
+        int w = -10;
+        for (int i = 0; i < 10; i++) {
+            worldInstance.create_box(new Vector3(w += 2, 1.5f, 10), true);
+        }
 
-		cam = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-		cam.position.set(0, 10, -20);
-		cam.lookAt(0, 0, 0);
-		cam.update();
+        rayTestCB = new ClosestRayResultCallback(Vector3.Zero, Vector3.Z);
+        font = new BitmapFont();
+        guiCam = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        guiCam.position.set(guiCam.viewportWidth / 2f, guiCam.viewportHeight / 2f, 0);
+        guiCam.update();
+        batch = new SpriteBatch();
 
-		models = new Array<Model>();
+        float wt = Gdx.graphics.getWidth() / 5f;
+        float dt = .1f * wt;
+        box = new Sprite(new Texture("cube.png"));
+        box.setPosition(0, 0);
 
-		modelBuilder = new ModelBuilder();
-		// creating a ground model using box shape
-		float groundWidth = 40;
-		modelBuilder.begin();
-		MeshPartBuilder mpb = modelBuilder.part("parts", GL20.GL_TRIANGLES, Usage.Position | Usage.Normal | Usage.ColorUnpacked, new Material(ColorAttribute.createDiffuse(Color.WHITE)));
-		mpb.setColor(1f, 1f, 1f, 1f);
-		mpb.box(0, 0, 0, groundWidth, 1, groundWidth);
-		Model model = modelBuilder.end();
-		models.add(model);
-		groundInstance = new ModelInstance(model);
+        cone = new Sprite(new Texture("cone.png"));
+        cone.setPosition(wt + dt, 0);
 
-		// create a sphere model
-		float radius = 2f;
-		final Model sphereModel = modelBuilder.createSphere(radius, radius, radius, 20, 20, new Material(ColorAttribute.createDiffuse(Color.RED), ColorAttribute.createSpecular(Color.GRAY), FloatAttribute.createShininess(64f)), Usage.Position | Usage.Normal);
-		models.add(sphereModel);
-		sphereInstance = new ModelInstance(sphereModel);
-		sphereInstance.transform.trn(0, 10, 0);
+        sphere = new Sprite(new Texture("sphere.png"));
+        sphere.setPosition(2 * wt + dt, 0);
 
-        // Initiating Bullet Physics
-        Bullet.init();
+        cylinder = new Sprite(new Texture("cylinder.png"));
+        cylinder.setPosition(3 * wt + dt, 0);
 
-        // setting up the world
-        collisionConfiguration = new btDefaultCollisionConfiguration();
-        dispatcher = new btCollisionDispatcher(collisionConfiguration);
-        broadphase = new btDbvtBroadphase();
-        solver = new btSequentialImpulseConstraintSolver();
-        world = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
-        world.setGravity(new Vector3(0, -9.81f, 1f));
+        raypick = new Sprite(new Texture("ray.png"));
+        raypick.setPosition(4 * wt + dt, 0);
 
-        // creating ground body
-        btCollisionShape groundshape = new btBoxShape(new Vector3(20, 1 / 2f, 20));
-        shapes.add(groundshape);
-        btRigidBodyConstructionInfo bodyInfo = new btRigidBodyConstructionInfo(0, null, groundshape, Vector3.Zero);
-        this.bodyInfos.add(bodyInfo);
-        btRigidBody body = new btRigidBody(bodyInfo);
-        bodies.add(body);
+        tick = new Sprite(new Texture("mark.png"));
+        enableButton(sphere);
 
-        world.addRigidBody(body);
+        collisionListener = new MyContactListener();
+        Gdx.input.setInputProcessor(adapter);
 
-        // creating sphere body
-        sphereMotionState = new btDefaultMotionState(sphereInstance.transform);
-        sphereMotionState.setWorldTransform(sphereInstance.transform);
-        final btCollisionShape sphereShape = new btSphereShape(1f);
-        shapes.add(sphereShape);
-
-        bodyInfo = new btRigidBodyConstructionInfo(1, sphereMotionState, sphereShape, new Vector3(1, 1, 1));
-        this.bodyInfos.add(bodyInfo);
-
-        body = new btRigidBody(bodyInfo);
-        bodies.add(body);
-        world.addRigidBody(body);
 	}
 
 	@Override
