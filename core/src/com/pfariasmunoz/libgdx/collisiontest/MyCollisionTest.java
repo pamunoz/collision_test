@@ -18,6 +18,19 @@ import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.physics.bullet.Bullet;
+import com.badlogic.gdx.physics.bullet.collision.btBoxShape;
+import com.badlogic.gdx.physics.bullet.collision.btCollisionDispatcher;
+import com.badlogic.gdx.physics.bullet.collision.btCollisionShape;
+import com.badlogic.gdx.physics.bullet.collision.btDbvtBroadphase;
+import com.badlogic.gdx.physics.bullet.collision.btDefaultCollisionConfiguration;
+import com.badlogic.gdx.physics.bullet.collision.btSphereShape;
+import com.badlogic.gdx.physics.bullet.dynamics.btDiscreteDynamicsWorld;
+import com.badlogic.gdx.physics.bullet.dynamics.btRigidBody;
+import com.badlogic.gdx.physics.bullet.dynamics.btRigidBody.btRigidBodyConstructionInfo;
+import com.badlogic.gdx.physics.bullet.dynamics.btSequentialImpulseConstraintSolver;
+import com.badlogic.gdx.physics.bullet.linearmath.btDefaultMotionState;
 import com.badlogic.gdx.utils.Array;
 
 public class MyCollisionTest extends ApplicationAdapter {
@@ -28,8 +41,17 @@ public class MyCollisionTest extends ApplicationAdapter {
 	ModelInstance groundInstance;
 	Environment environment;
 	ModelBuilder modelBuilder;
-	SpriteBatch batch;
-	Texture img;
+
+    // Bullet
+    private btDefaultCollisionConfiguration collisionConfiguration;
+    private btCollisionDispatcher dispatcher;
+    private btDbvtBroadphase broadphase;
+    private btSequentialImpulseConstraintSolver solver;
+    private btDiscreteDynamicsWorld world;
+    private Array<btCollisionShape> shapes = new Array<btCollisionShape>();
+    private Array<btRigidBodyConstructionInfo> bodyInfos = new Array<btRigidBodyConstructionInfo>();
+    private Array<btRigidBody> bodies = new Array<btRigidBody>();
+    private btDefaultMotionState sphereMotionState;
 	
 	@Override
 	public void create () {
@@ -63,6 +85,40 @@ public class MyCollisionTest extends ApplicationAdapter {
 		models.add(sphereModel);
 		sphereInstance = new ModelInstance(sphereModel);
 		sphereInstance.transform.trn(0, 10, 0);
+
+        // Initiating Bullet Physics
+        Bullet.init();
+
+        // setting up the world
+        collisionConfiguration = new btDefaultCollisionConfiguration();
+        dispatcher = new btCollisionDispatcher(collisionConfiguration);
+        broadphase = new btDbvtBroadphase();
+        solver = new btSequentialImpulseConstraintSolver();
+        world = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
+        world.setGravity(new Vector3(0, -9.81f, 1f));
+
+        // creating ground body
+        btCollisionShape groundshape = new btBoxShape(new Vector3(20, 1 / 2f, 20));
+        shapes.add(groundshape);
+        btRigidBodyConstructionInfo bodyInfo = new btRigidBodyConstructionInfo(0, null, groundshape, Vector3.Zero);
+        this.bodyInfos.add(bodyInfo);
+        btRigidBody body = new btRigidBody(bodyInfo);
+        bodies.add(body);
+
+        world.addRigidBody(body);
+
+        // creating sphere body
+        sphereMotionState = new btDefaultMotionState(sphereInstance.transform);
+        sphereMotionState.setWorldTransform(sphereInstance.transform);
+        final btCollisionShape sphereShape = new btSphereShape(1f);
+        shapes.add(sphereShape);
+
+        bodyInfo = new btRigidBodyConstructionInfo(1, sphereMotionState, sphereShape, new Vector3(1, 1, 1));
+        this.bodyInfos.add(bodyInfo);
+
+        body = new btRigidBody(bodyInfo);
+        bodies.add(body);
+        world.addRigidBody(body);
 	}
 
 	@Override
@@ -70,6 +126,10 @@ public class MyCollisionTest extends ApplicationAdapter {
 		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 		Gdx.gl.glClearColor(0, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+
+        world.stepSimulation(Gdx.graphics.getDeltaTime(), 5);
+
+        sphereMotionState.getWorldTransform(sphereInstance.transform);
 
 		modelBatch.begin(cam);
 		modelBatch.render(groundInstance, environment);
@@ -80,8 +140,17 @@ public class MyCollisionTest extends ApplicationAdapter {
 	@Override
 	public void dispose () {
 		modelBatch.dispose();
-		for (Model model : models) {
-			model.dispose();
-		}
-	}
+		for (Model model : models) model.dispose();
+		for (btRigidBody body : bodies) body.dispose();
+        sphereMotionState.dispose();
+        for (btCollisionShape shape : shapes) shape.dispose();
+        for (btRigidBodyConstructionInfo info : bodyInfos) info.dispose();
+        world.dispose();
+        collisionConfiguration.dispose();
+        dispatcher.dispose();
+        broadphase.dispose();
+        solver.dispose();
+        Gdx.app.log(this.getClass().getName(), "Disposed");
+    }
 }
+
