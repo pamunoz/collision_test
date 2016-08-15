@@ -152,18 +152,18 @@ public class MyCollisionTest extends ApplicationAdapter {
 	
 	@Override
 	public void dispose () {
-		modelBatch.dispose();
-		for (Model model : models) model.dispose();
-		for (btRigidBody body : bodies) body.dispose();
-        sphereMotionState.dispose();
-        for (btCollisionShape shape : shapes) shape.dispose();
-        for (btRigidBodyConstructionInfo info : bodyInfos) info.dispose();
-        world.dispose();
-        collisionConfiguration.dispose();
-        dispatcher.dispose();
-        broadphase.dispose();
-        solver.dispose();
-        Gdx.app.log(this.getClass().getName(), "Disposed");
+		for (UserData data : UserData.data) {
+            data.dispose();
+        }
+        worldInstance.dispose();
+        modelBatch.dispose();
+
+        box.getTexture().dispose();
+        cone.getTexture().dispose();
+        cylinder.getTexture().dispose();
+        raypick.getTexture().dispose();
+        sphere.getTexture().dispose();
+        Gdx.app.log(this.getClass().getName(), "Disposed.");
     }
 
     public void enableButton(Sprite sp) {
