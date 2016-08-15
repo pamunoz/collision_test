@@ -3,49 +3,29 @@ package com.pfariasmunoz.libgdx.collisiontest;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.Environment;
-import com.badlogic.gdx.graphics.g3d.Material;
-import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
-import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
-import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalShadowLight;
 import com.badlogic.gdx.graphics.g3d.utils.DepthShaderProvider;
-import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
-import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.Ray;
-import com.badlogic.gdx.physics.bullet.Bullet;
 import com.badlogic.gdx.physics.bullet.collision.ClosestRayResultCallback;
-import com.badlogic.gdx.physics.bullet.collision.btBoxShape;
-import com.badlogic.gdx.physics.bullet.collision.btCollisionDispatcher;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionObject;
-import com.badlogic.gdx.physics.bullet.collision.btCollisionShape;
-import com.badlogic.gdx.physics.bullet.collision.btDbvtBroadphase;
-import com.badlogic.gdx.physics.bullet.collision.btDefaultCollisionConfiguration;
-import com.badlogic.gdx.physics.bullet.collision.btSphereShape;
-import com.badlogic.gdx.physics.bullet.dynamics.btDiscreteDynamicsWorld;
 import com.badlogic.gdx.physics.bullet.dynamics.btRigidBody;
-import com.badlogic.gdx.physics.bullet.dynamics.btRigidBody.btRigidBodyConstructionInfo;
-import com.badlogic.gdx.physics.bullet.dynamics.btSequentialImpulseConstraintSolver;
-import com.badlogic.gdx.physics.bullet.linearmath.btDefaultMotionState;
-import com.badlogic.gdx.utils.Array;
 
 public class MyCollisionTest extends ApplicationAdapter {
-	PerspectiveCamera cam;
-	ModelBatch modelBatch;
-	Environment environment;
+    PerspectiveCamera cam;
+    ModelBatch modelBatch;
+    Environment environment;
 
     MyCollisionWorld worldInstance;
     btRigidBody groundBody;
@@ -62,19 +42,22 @@ public class MyCollisionTest extends ApplicationAdapter {
     DirectionalShadowLight shadowLight;
     ModelBatch shadowBatch;
 
-	@Override
-	public void create () {
+    @Override
+    public void create() {
         modelBatch = new ModelBatch();
         environment = new Environment();
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, .4f, .4f, .4f, 1f));
         environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
-        //*************************************************************
+
+// /*************
         shadowLight = new DirectionalShadowLight(1024, 1024, 60, 60, 1f, 300);
         shadowLight.set(0.8f, 0.8f, 0.8f, -1f, -.8f, -.2f);
         environment.add(shadowLight);
         environment.shadowMap = shadowLight;
         shadowBatch = new ModelBatch(new DepthShaderProvider());
-        //**************************************************************
+
+// **************//
+
         cam = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         cam.position.set(0, 10, -20);
         cam.lookAt(0, 0, 0);
@@ -119,11 +102,15 @@ public class MyCollisionTest extends ApplicationAdapter {
 
         collisionListener = new MyContactListener();
         Gdx.input.setInputProcessor(adapter);
-	}
 
-	@Override
-	public void render () {
+    }
 
+    public void enableButton(Sprite sp) {
+        tick.setPosition(sp.getX(), sp.getY());
+    }
+
+    @Override
+    public void render() {
         Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         Gdx.gl.glClearColor(.2f, 0.2f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
@@ -134,8 +121,8 @@ public class MyCollisionTest extends ApplicationAdapter {
                 worldInstance.remove(data.getBody());
             }
         }
-        // update the world
-        //****************
+
+// /****************
         shadowLight.begin(Vector3.Zero, cam.direction);
         shadowBatch.begin(shadowLight.getCamera());
         for (UserData data : UserData.data) {
@@ -143,7 +130,7 @@ public class MyCollisionTest extends ApplicationAdapter {
         }
         shadowBatch.end();
         shadowLight.end();
-        //********************
+// ********************/
 
         modelBatch.begin(cam);
         for (UserData data : UserData.data) {
@@ -162,37 +149,34 @@ public class MyCollisionTest extends ApplicationAdapter {
         tick.draw(batch);
         batch.end();
     }
-	
-	@Override
-	public void dispose () {
-		for (UserData data : UserData.data) {
+
+    @Override
+    public void dispose() {
+        for (UserData data : UserData.data) {
             data.dispose();
         }
         worldInstance.dispose();
         modelBatch.dispose();
+// /*************
+        shadowBatch.dispose();
+        shadowLight.dispose();
+// *************/
 
         box.getTexture().dispose();
         cone.getTexture().dispose();
         cylinder.getTexture().dispose();
         raypick.getTexture().dispose();
         sphere.getTexture().dispose();
-        shadowBatch.dispose();
-        shadowLight.dispose();
         Gdx.app.log(this.getClass().getName(), "Disposed.");
     }
 
-    public void enableButton(Sprite sp) {
-        tick.setPosition(sp.getX(), sp.getY());
-    }
-
-    // Input adapter and ray testing
     private final InputAdapter adapter = new InputAdapter() {
         private Items item = Items.SPHERE;
         private final Vector3 temp = new Vector3();
 
         public boolean touchUp(int screenX, int screenY, int pointer, int button) {
             guiCam.unproject(temp.set(screenX, screenY, 0));
-            if(box.getBoundingRectangle().contains(temp.x, temp.y)) {
+            if (box.getBoundingRectangle().contains(temp.x, temp.y)) {
                 enableButton(box);
                 item = Items.BOX;
                 return true;
@@ -232,24 +216,27 @@ public class MyCollisionTest extends ApplicationAdapter {
                     body = worldInstance.create_sphere(position, false);
                     break;
                 case RAY_PICKING:
+
                     rayFrom.set(ray.origin);
                     rayTo.set(ray.direction).scl(50f).add(rayFrom); // 50 meters max
                     rayTestCB.setCollisionObject(null);
                     rayTestCB.setClosestHitFraction(1f);
                     worldInstance.getWorld().rayTest(rayFrom, rayTo, rayTestCB);
 
-                    if(rayTestCB.hasHit()) {
+                    if (rayTestCB.hasHit()) {
                         final btCollisionObject obj = rayTestCB.getCollisionObject();
                         body = (btRigidBody) (obj);
-                        if (body != groundBody) worldInstance.remove(body);
+                        if (body != groundBody)
+                            worldInstance.remove(body);
                     }
+
                     return true;
             }
-
             body.applyCentralImpulse(ray.direction.scl(20));
 
             return true;
-        }
+        };
     };
+
 }
 

@@ -9,9 +9,6 @@ import com.badlogic.gdx.physics.bullet.dynamics.btDiscreteDynamicsWorld;
 import com.badlogic.gdx.physics.bullet.dynamics.btRigidBody;
 import com.badlogic.gdx.physics.bullet.dynamics.btSequentialImpulseConstraintSolver;
 
-/**
- * Created by Pablo Farias on 15-08-16.
- */
 public class BulletWorld implements MyBulletInterface {
     protected btDefaultCollisionConfiguration collisionConfiguration;
     protected btCollisionDispatcher dispatcher;
@@ -32,11 +29,12 @@ public class BulletWorld implements MyBulletInterface {
         solver = new btSequentialImpulseConstraintSolver();
         world = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
         world.setGravity(new Vector3(0, -9.81f, .1f));
+
     }
 
     @Override
     public void update(float delta) {
-        world.stepSimulation(delta, 5, 1/60f);
+        world.stepSimulation(delta, 5 , 1/60f);
     }
 
     @Override
@@ -50,12 +48,14 @@ public class BulletWorld implements MyBulletInterface {
 
     @Override
     public btDiscreteDynamicsWorld getWorld() {
-        return world;
+        return world ;
     }
 
     @Override
     public void remove(btRigidBody body) {
         world.removeRigidBody(body);
-        ((UserData)body.userData).dispose();
+        ((UserData) body.userData).dispose();
+
     }
+
 }
