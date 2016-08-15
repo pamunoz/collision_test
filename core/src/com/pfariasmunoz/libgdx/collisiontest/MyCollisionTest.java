@@ -4,9 +4,12 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.VertexAttributes.Usage;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.Environment;
 import com.badlogic.gdx.graphics.g3d.Material;
@@ -20,6 +23,7 @@ import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.Bullet;
+import com.badlogic.gdx.physics.bullet.collision.ClosestRayResultCallback;
 import com.badlogic.gdx.physics.bullet.collision.btBoxShape;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionDispatcher;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionShape;
@@ -41,6 +45,18 @@ public class MyCollisionTest extends ApplicationAdapter {
 	ModelInstance groundInstance;
 	Environment environment;
 	ModelBuilder modelBuilder;
+
+    MyCollisionWorld worldInstance;
+    btRigidBody groundBody;
+    MyContactListener collisionListener;
+    Sprite box, cone, cylinder, sphere, raypick, tick;
+    ClosestRayResultCallback rayTestCB;
+    Vector3 rayFrom = new Vector3();
+    Vector3 rayTo = new Vector3();
+
+    BitmapFont font;
+    OrthographicCamera guiCam;
+    SpriteBatch batch;
 
     // Bullet
     private btDefaultCollisionConfiguration collisionConfiguration;
